@@ -19,6 +19,9 @@ from models import (
     CertificationCreate,
     CertificationOut,
     CertificationUpdate,
+    EducationCreate,
+    EducationOut,
+    EducationUpdate,
     ExperienceCreate,
     ExperienceOut,
     ExperienceUpdate,
@@ -179,6 +182,15 @@ async def admin_upload_resume(
         upsert=True,
     )
     return {"resume_url": public_url}
+
+
+@router.post("/site/upload/resume")
+async def admin_upload_resume_alias(
+    file: UploadFile,
+    _admin: Annotated[str, Depends(get_current_admin_email)],
+):
+    # Backward-compatible alias for deployments/frontends expecting /api/admin/site/upload/resume
+    return await admin_upload_resume(file=file, _admin=_admin)
 
 
 # ——— Projects ———
@@ -349,6 +361,71 @@ async def admin_delete_experience(
     result = await db.experience.delete_one({"_id": oid(item_id)})
     if result.deleted_count == 0:
         raise HTTPException(404, "Experience not found")
+
+
+# ——— Education ———
+@router.post("/education", response_model=EducationOut, status_code=status.HTTP_201_CREATED)
+async def admin_create_education(
+    body: EducationCreate,
+    _admin: Annotated[str, Depends(get_current_admin_email)],
+):
+    db = get_db()
+    data = body.model_dump(exclude={"id"}, exclude_none=False)
+    data.pop("id", None)
+    res = await db.education.insert_one(data)
+    doc = await db.education.find_one({"_id": res.inserted_id})
+    return EducationOut.model_validate(doc)
+
+
+@router.get("/education", response_model=list[EducationOut])
+async def admin_list_education(_admin: Annotated[str, Depends(get_current_admin_email)]):
+    db = get_db()
+    cursor = db.education.find().sort([("sort_order", 1), ("start_date", -1)])
+    docs = await cursor.to_list(500)
+    return [EducationOut.model_validate(d) for d in docs]
+
+
+@router.get("/education/{item_id}", response_model=EducationOut)
+async def admin_get_education(
+    item_id: str,
+    _admin: Annotated[str, Depends(get_current_admin_email)],
+):
+    db = get_db()
+    doc = await db.education.find_one({"_id": oid(item_id)})
+    if not doc:
+        raise HTTPException(404, "Education not found")
+    return EducationOut.model_validate(doc)
+
+
+@router.put("/education/{item_id}", response_model=EducationOut)
+async def admin_update_education(
+    item_id: str,
+    body: EducationUpdate,
+    _admin: Annotated[str, Depends(get_current_admin_email)],
+):
+    db = get_db()
+    updates = body.model_dump(exclude_unset=True)
+    if not updates:
+        doc = await db.education.find_one({"_id": oid(item_id)})
+        if not doc:
+            raise HTTPException(404, "Education not found")
+        return EducationOut.model_validate(doc)
+    result = await db.education.update_one({"_id": oid(item_id)}, {"$set": updates})
+    if result.matched_count == 0:
+        raise HTTPException(404, "Education not found")
+    doc = await db.education.find_one({"_id": oid(item_id)})
+    return EducationOut.model_validate(doc)
+
+
+@router.delete("/education/{item_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def admin_delete_education(
+    item_id: str,
+    _admin: Annotated[str, Depends(get_current_admin_email)],
+):
+    db = get_db()
+    result = await db.education.delete_one({"_id": oid(item_id)})
+    if result.deleted_count == 0:
+        raise HTTPException(404, "Education not found")
 
 
 # ——— Certifications ———

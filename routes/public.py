@@ -9,6 +9,7 @@ from mail import send_contact_email
 from models import (
     CertificationOut,
     ContactIn,
+    EducationOut,
     ExperienceOut,
     ProjectOut,
     SitePublicOut,
@@ -49,6 +50,14 @@ async def list_experience():
     cursor = db.experience.find().sort([("start_date", -1)])
     docs = await cursor.to_list(500)
     return [ExperienceOut.model_validate(d) for d in docs]
+
+
+@router.get("/education", response_model=list[EducationOut])
+async def list_education():
+    db = get_db()
+    cursor = db.education.find().sort([("sort_order", 1), ("start_date", -1)])
+    docs = await cursor.to_list(500)
+    return [EducationOut.model_validate(d) for d in docs]
 
 
 @router.get("/certifications", response_model=list[CertificationOut])

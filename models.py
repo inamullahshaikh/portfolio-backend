@@ -144,6 +144,42 @@ class ExperienceOut(ExperienceBase):
         return oid_str(v)
 
 
+# ——— Education ———
+class EducationBase(BaseModel):
+    company: str
+    role: str
+    location: str = ""
+    start_date: str = ""
+    end_date: str = ""
+    bullets: list[str] = Field(default_factory=list)
+    sort_order: int = 0
+
+
+class EducationCreate(EducationBase):
+    id: str = ""
+
+
+class EducationUpdate(BaseModel):
+    company: str | None = None
+    role: str | None = None
+    location: str | None = None
+    start_date: str | None = None
+    end_date: str | None = None
+    bullets: list[str] | None = None
+    sort_order: int | None = None
+
+
+class EducationOut(EducationBase):
+    model_config = ConfigDict(populate_by_name=True, extra="ignore")
+
+    id: str = Field(validation_alias="_id")
+
+    @field_validator("id", mode="before")
+    @classmethod
+    def coerce_id(cls, v: Any) -> str:
+        return oid_str(v)
+
+
 # ——— Certifications ———
 class CertificationBase(BaseModel):
     name: str
