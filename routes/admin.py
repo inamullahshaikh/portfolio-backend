@@ -9,7 +9,7 @@ from typing import Annotated
 from bson import ObjectId
 from bson.errors import InvalidId
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, status
-from pydantic import EmailStr, ValidationError
+from pydantic import EmailStr, TypeAdapter, ValidationError
 
 from auth import create_access_token, get_current_admin_email, verify_password
 from db import get_db
@@ -43,6 +43,7 @@ from site_defaults import SITE_DOCUMENT_ID
 from site_service import get_site_public
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
+_email_adapter = TypeAdapter(EmailStr)
 
 
 def oid(id_str: str) -> ObjectId:
@@ -97,7 +98,7 @@ async def reply_to_message(
     if not raw_to:
         raise HTTPException(status_code=400, detail="Message has no sender email")
     try:
-        to_email = str(EmailStr(raw_to))
+        to_email = str(_email_adapter.validate_python(raw_to))
     except ValidationError as e:
         raise HTTPException(status_code=400, detail="Message has invalid sender email") from e
     text = body.body.strip()
